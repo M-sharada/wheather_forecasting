@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>India Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <style>
+      body {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        margin: 0;
+        background-color: skyblue;
+      }
+      img {
+        max-width: 25%;
+        align-self: left;
+      }
+      .container,
+      .time-container {
+        display: flex;
+        flex: 1;
+      }
+      input[type="button"],
+      .time-slider {
+        background-color: lightpink;
+      }
+      form {
+        padding: 9%;
+        flex: 1;
+      }
+      #select {
+        font-size: 35px;
+      }
+      .box,
+      .time-slider {
+        width: 250px;
+        padding: 5px;
+      }
+      .button {
+        padding: 10px 20px;
+        font-size: 16px;
+      }
+      #map {
+        height: 60%;
+        flex: 2;
+        padding-top: 10%;
+      }
+
+      .time-slider {
+        width: 50%;
+        margin: 20px 5% 20px auto;
+        align-self: flex-end;
+        height: 50px; /* Adjust height */
+        border-radius: 0; /* Make it rectangular */
+        overflow: hidden; /* Hide overflow */
+      }
+      .time-slider input[type="range"] {
+        width: 100%; /* Fill the container */
+        height: 100%; /* Fill the container */
+        -webkit-appearance: none; /* Remove default styles */
+        appearance: none; /* Remove default styles */
+        background: lightpink; /* Background color */
+        outline: none; /* Remove outline */
+        border: none; /* Remove border */
+        border-radius: 0; /* Round corners */
+      }
+      .time-slider input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none; /* Remove default styles */
+        appearance: none; /* Remove default styles */
+        width: 20px; /* Width of the thumb */
+        height: 20px; /* Height of the thumb */
+        background: white; /* Thumb color */
+        border-radius: 50%; /* Circle shape */
+        cursor: pointer; /* Cursor on hover */
+      }
+      @media (max-width: 768px) {
+        .container {
+          flex-direction: column;
+        }
+        #map,
+        .time-slider {
+          width: 100%;
+          height: 250px;
+        }
+        .time-slider {
+          width: 90%;
+          margin: 20px auto;
+        }
+      }
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      .close:hover,
+      .close:focus {
+        color: black;
+        text-decoration: none;
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  </head>
+  <body>
+    <img src="{{ url_for('static', filename='wcrglogo.jpg') }}" alt="Weather" />
+    <div>
+      <img id="imageDisplay" />
+    </div>
+    <div class="container">
+      <form id="generateForm">
+        <label for="initial" id="select"
+          ><b>Select forecast initial date:</b></label
+        ><br /><br />
+        <!-- initialDate -->
+        <input
+          type="date"
+          class="box"
+          name="initial"
+          id="initialDate"
+        /><br /><br />
+        <label for="forecastDates" id="select"
+          ><b>Select forecast dates for 7 days:</b></label
+        ><br /><br />
+        <select name="forecastDates" id="forecastDates" class="box"></select
+        ><br /><br />
+        <label for="stateSelect" id="select"><b>Select State</b></label
+        ><br />
+        <!-- stateName -->
+        <select id="stateSelect" class="box">
+          <!-- Dropdown filled by JavaScript -->
+        </select>
+        <br />
+        <label for="parameter" id="select"><b>Select parameter:</b></label
+        ><br /><br />
+        <select name="para" id="para" class="box">
+          <option value="Rainfall">Rainfall</option>
+          <option value="Surface Temperature">Surface Temperature</option>
+          <option value="Humidity">Humidity</option>
+          <option value="Snowfall">Snowfall</option></select
+        ><br /><br />
+        <label for="Domain" id="select"><b>Select Domain:</b></label
+        ><br /><br />
+        <select name="Domains" id="Domains" class="box">
+          <option value="South Asia(4KM)">South Asia(4KM)</option>
+          <option value="Eurasia">Eurasia(12KM)</option>
+          <option value="Humidity">South India(1.3KM)</option>
+          <option value="Snowfall">Chittor region(0.4KM)</option></select
+        ><br /><br />
+        <!-- <input
+          type="button"
+          class="button"
+          value="Submit"
+          onclick="changeMarkerColor()"
+        /> -->
+        <div class="time-container">
+          <input
+            type="range"
+            class="time-slider"
+            min="0"
+            max="24"
+            value="0"
+            id="timeSlider"
+          />
+        </div>
+        <button type="submit" class="button" onclick="changeMarkerColor()">
+          Submit
+        </button>
+      </form>
+      <div id="map"></div>
+    </div>
+
+    <div id="myModal" class="modal">
+      <div class="modal-content">
+        <span class="close" onclick="closeModal()">&times;</span>
+        <iframe
+          id="modalContent"
+          src=""
+          style="width: 100%; height: 100%"
+          frameborder="0"
+        ></iframe>
+      </div>
+    </div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+      var map = L.map("map").setView([21.5937, 78.9629], 5);
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      }).addTo(map);
+
+      var markersData = [
+        {
+          name: "Andaman and Nicobar Islands",
+          lat: 10.2188343994493,
+          lng: 92.57713289999998,
+        },
+        {
+          name: "Andhra Pradesh",
+          lat: 15.924090500015737,
+          lng: 80.18638089999999,
+        },
+        { name: "Gujarat", lat: 22.385005100402285, lng: 71.745261 },
+        { name: "Maharashtra", lat: 18.90683560030784, lng: 75.6741579 },
+        { name: "Arunachal Pradesh", lat: 28.093770199935786, lng: 94.5921326 },
+        { name: "Assam", lat: 26.40738410012204, lng: 93.2551303 },
+        { name: "Bihar", lat: 25.64408450019941, lng: 85.906508 },
+        { name: "Delhi", lat: 28.62739279987712, lng: 77.1716954 },
+        { name: "Tamil Nadu", lat: 10.909433399492215, lng: 78.36653469999999 },
+        {
+          name: "Madhya Pradesh",
+          lat: 23.814341900344257,
+          lng: 77.53407189999999,
+        },
+        {
+          name: "West Bengal",
+          lat: 22.996494800384152,
+          lng: 87.68558819999998,
+        },
+        { name: "Orissa", lat: 20.543124100393143, lng: 84.6897321 },
+        { name: "Rajasthan", lat: 26.81057770007866, lng: 73.7684549 },
+        { name: "Karnataka", lat: 14.520389599850693, lng: 75.7223521 },
+        { name: "Telangana", lat: 17.849591900220112, lng: 79.1151663 },
+        { name: "Kerala", lat: 10.352874399456772, lng: 76.5120396 },
+        { name: "Jharkhand", lat: 23.455980900363866, lng: 85.25573009999998 },
+        { name: "Punjab", lat: 30.929321099665902, lng: 75.50048410000001 },
+        { name: "Chhattisgarh", lat: 21.66373590041017, lng: 81.8406351 },
+        { name: "Haryana", lat: 28.99999999983744, lng: 76 },
+        { name: "Jammu and Kashmir", lat: 32.732998, lng: 74.864273 },
+        { name: "Uttarakhand", lat: 30.04173759973603, lng: 79.08969099999999 },
+        {
+          name: "Himachal Pradesh",
+          lat: 31.929235199611334,
+          lng: 77.18284619999999,
+        },
+        { name: "Tripura", lat: 23.77508230034657, lng: 91.7025091 },
+        { name: "Meghalaya", lat: 25.53794320020953, lng: 91.2999102 },
+        { name: "Manipur", lat: 24.720881800281017, lng: 93.9538465 },
+        { name: "Nagaland", lat: 26.16305560014758, lng: 94.5884911 },
+        { name: "Goa", lat: 15.300454299942789, lng: 74.08551339999998 },
+        { name: "Mizoram", lat: 23.214616900375216, lng: 92.8687612 },
+        { name: "Puducherry", lat: 11.934056, lng: 79.830645 },
+      ];
+
+      var markers = {};
+      var isRed = {};
+
+      markersData.forEach(function (markerData) {
+        var marker = L.marker([markerData.lat, markerData.lng])
+          .addTo(map)
+          .bindPopup(markerData.name);
+        markers[markerData.name] = marker;
+        isRed[markerData.name] = false;
+
+        var option = document.createElement("option");
+        option.value = markerData.name;
+        option.text = markerData.name;
+        document.getElementById("stateSelect").appendChild(option);
+        // onclick for marker tag
+        marker.on("click", function () {
+          if (isRed[markerData.name]) {
+            window.location.href = "/getimage";
+            // var modal = document.getElementById("myModal");
+            // var modalContent = document.getElementById("modalContent");
+            // modal.style.display = "block";
+            // modalContent.src = "/getimage";
+          }
+        });
+      });
+
+      $(document).ready(function () {
+        $("#generateForm").submit(function (event) {
+          event.preventDefault();
+          var formData = {
+            date2: $("#initialDate").val(),
+            state_name: $("#stateSelect").val(),
+            hour: $("#timeSlider").val().padStart(2, "0"),
+          };
+          // Send AJAX POST request to the server
+          $.ajax({
+            type: "POST",
+            url: "/",
+            contentType: "application/json",
+            data: JSON.stringify(formData),
+            success: function (response) {
+              // Handle success response if needed
+              console.log(response);
+            },
+            error: function (xhr, status, error) {
+              // Handle error response if needed
+              console.error(error);
+            },
+          });
+        });
+      });
+
+      function changeMarkerColor() {
+        var selectedState = document.getElementById("stateSelect").value;
+
+        Object.keys(markers).forEach(function (stateName) {
+          var defaultIcon = new L.Icon.Default();
+          markers[stateName].setIcon(defaultIcon);
+          isRed[stateName] = false;
+        });
+
+        var redIcon = new L.Icon({
+          iconUrl:
+            "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png",
+          shadowUrl:
+            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
+          iconSize: [25, 41],
+          iconAnchor: [12, 41],
+          popupAnchor: [1, -34],
+          shadowSize: [41, 41],
+        });
+        markers[selectedState].setIcon(redIcon);
+        isRed[selectedState] = true;
+      }
+
+      document
+        .getElementById("initialDate")
+        .addEventListener("change", function () {
+          var initialDate = new Date(this.value);
+          var forecastDatesSelect = document.getElementById("forecastDates");
+          forecastDatesSelect.innerHTML = ""; // Clear previous options
+
+          for (var i = 0; i < 7; i++) {
+            var date = new Date(initialDate);
+            date.setDate(initialDate.getDate() + i);
+            var option = document.createElement("option");
+            option.value = date.toISOString().split("T")[0]; // Format: YYYY-MM-DD
+            option.text = date.toDateString();
+            forecastDatesSelect.appendChild(option);
+          }
+        });
+
+      // JavaScript code for fetching and displaying images
+      document
+        .getElementById("timeSlider")
+        .addEventListener("input", function () {
+          var sliderValue = this.value;
+          console.log("Slider value: " + sliderValue); // Replace this with functionality to adjust the map based on time
+
+          // Fetch image based on slider value
+          fetch(`/images/${sliderValue}.jpg`)
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Image not found");
+              }
+              return response.blob();
+            })
+            .then((blob) => {
+              const imageUrl = URL.createObjectURL(blob);
+              document.getElementById("imageDisplay").src = imageUrl;
+            })
+            .catch((error) => {
+              console.error(error);
+            });
+        });
+    </script>
+  </body>
+</html>

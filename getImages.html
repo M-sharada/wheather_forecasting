@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dynamic Image</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f2f2f2;
+      }
+
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+
+      h1 {
+        text-align: center;
+      }
+
+      .time-container {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+
+      .time-slider {
+        width: 80%;
+      }
+
+      #imageDisplay {
+        display: block;
+        margin: 0 auto;
+        max-width: 100%;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Image Display</h1>
+      <div class="time-container">
+        <input
+          type="range"
+          class="time-slider"
+          min="0"
+          max="23"
+          value="0"
+          id="timeSlider"
+        />
+      </div>
+
+      <img
+        src="{{ url_for('static', filename='images/' + date2 + '_' + hour + '.' + state + '.png') }}"
+        alt="Image individual"
+        id="imageDisplay"
+      />
+    </div>
+
+    <script>
+      var timeSlider = document.getElementById("timeSlider");
+      var imageDisplay = document.getElementById("imageDisplay");
+
+      // Add event listener to the range input
+      timeSlider.addEventListener("input", function () {
+        var hour =
+          timeSlider.value < 10 ? "0" + timeSlider.value : timeSlider.value;
+        imageDisplay.src =
+          "{{ url_for('static', filename='images/') }}" +
+          "{{ date2 }}" +
+          "_" +
+          hour +
+          "." +
+          "{{ state }}" +
+          ".png";
+      });
+    </script>
+  </body>
+</html>
